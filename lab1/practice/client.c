@@ -35,6 +35,7 @@ int main()
         return 1;
     }
 
+    printf("Connected to server!\n");
     // Continuously prompt for user input and send messages to the server
     while (1)
     {
