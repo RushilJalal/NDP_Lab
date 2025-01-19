@@ -7,17 +7,17 @@
 
 int file_server(int clientfd)
 {
-    char buffer[256];
+    char filename[256];
 
     while (1)
     {
         // recv filename from client
-        int recv_value = recv(clientfd, buffer, sizeof(buffer), 0);
+        int recv_value = recv(clientfd, filename, sizeof(filename), 0);
 
-        printf("File name received from client: %s\n", buffer);
+        printf("File name received from client: %s\n", filename);
 
         // create file pointer
-        FILE *fp = fopen(buffer, "r+");
+        FILE *fp = fopen(filename, "r+");
         int file_found = 1;
 
         if (!fp)
@@ -68,7 +68,6 @@ int file_server(int clientfd)
                         pos += strlen(string);
                     }
                 }
-                fclose(fp);
 
                 // send string count to the client
                 if (send(clientfd, &count, sizeof(int), 0) == -1)
@@ -82,8 +81,64 @@ int file_server(int clientfd)
                 break;
 
             case 2:
-            //replace str1 with str2
-            
+                // replace str1 with str2
+                // recv str1 and str2
+                char str1[50], str2[50];
+                if (recv(clientfd, str1, sizeof(str1), 0) == -1 || recv(clientfd, str2, sizeof(str2), 0) == -1)
+                {
+                    printf("Error receiving str1, str2\n");
+                    close(clientfd);
+                    return 1;
+                }
+
+                // create a temporary file to store modified content
+                FILE *temp = fopen("temp.txt", "w");
+                if (temp == NULL)
+                {
+                    printf("Error creating temporary file\n");
+                    fclose(fp);
+                    close(clientfd);
+                    return 1;
+                }
+
+                // search for str1 in file line by line and replace with str2
+                count = 0;
+                memset(line, 0, sizeof(line));
+
+                while (fgets(line, sizeof(line), fp) != NULL)
+                {
+                    char *pos = line; // points to beginning of line
+                    while ((pos = strstr(pos, str1)) != NULL)
+                    {
+                        count++;
+                        char buffer[1024];
+                        strncpy(buffer, line, pos - line);
+                        buffer[pos - line] = '\0';
+                        strcat(buffer, str2);
+                        strcat(buffer, pos + strlen(str1));
+                        strcpy(line, buffer);
+                        pos += strlen(str2);
+                    }
+                    fputs(line, temp);
+                }
+
+                // send the count back to client
+                if (send(clientfd, &count, sizeof(int), 0) == -1)
+                {
+                    printf("error sending count of replacements to client\n");
+                    close(clientfd);
+                    return 1;
+                }
+
+                fclose(fp);
+                fclose(temp);
+
+                remove(filename);
+                rename("temp.txt", filename);
+                break;
+
+            case 3:
+                // rearrange the text in increasing order of ascii value
 
             default:
                 break;

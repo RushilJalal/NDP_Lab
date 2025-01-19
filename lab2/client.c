@@ -111,13 +111,35 @@ int main()
                 gets(str2);
 
                 // send str1, str2 to server
-                if (send(sockfd, str1, sizeof(str1), 0) && send(sockfd, str2, sizeof(str2), 0) == -1)
+                if (send(sockfd, str1, sizeof(str1), 0) == -1 || send(sockfd, str2, sizeof(str2), 0) == -1)
                 {
-                    printf("Error sending str1, str2 to server\n");
+                    printf("Error sending str1 or str2 to server\n");
                     close(sockfd);
                     return 1;
                 }
 
+                // receive count of replacements from server
+                int count;
+                if (recv(sockfd, &count, sizeof(int), 0) == -1)
+                {
+                    printf("error receiving count of replacements from server\n");
+                    close(sockfd);
+                    return 1;
+                }
+
+                if (count > 0)
+                {
+                    printf("String replaced\n");
+                }
+                else
+                {
+                    printf("string not found\n");
+                }
+
+                break;
+
+            case 3:
+                //rearrange the text in increasing order of ascii value
                 
 
             default:
