@@ -4,6 +4,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdlib.h>
 
 int file_server(int clientfd)
 {
@@ -138,7 +139,33 @@ int file_server(int clientfd)
                 break;
 
             case 3:
-                // rearrange the text in increasing order of ascii value
+                // rearrange the entire text in the file in increasing order of their ASCII value
+                fseek(fp, 0, SEEK_END);
+                long file_size = ftell(fp);
+                fseek(fp, 0, SEEK_SET);
+
+                char *file_content = malloc(file_size + 1);
+                if (file_content == NULL)
+                {
+                    printf("Memory allocation error\n");
+                    fclose(fp);
+                    close(clientfd);
+                    return 1;
+                }
+
+                fread(file_content, 1, file_size, fp);
+                file_content[file_size] = '\0';
+
+                // sort the file content
+                qsort(file_content, file_size, sizeof(char), (int (*)(const void *, const void *))strcmp);
+
+                // write the sorted content back to the file
+                freopen(filename, "w", fp);
+                fputs(file_content, fp);
+
+                free(file_content);
+                fclose(fp);
+                break;
 
             default:
                 break;

@@ -119,7 +119,6 @@ int main()
                 }
 
                 // receive count of replacements from server
-                int count;
                 if (recv(sockfd, &count, sizeof(int), 0) == -1)
                 {
                     printf("error receiving count of replacements from server\n");
@@ -139,8 +138,9 @@ int main()
                 break;
 
             case 3:
-                //rearrange the text in increasing order of ascii value
-                
+                // rearrange the text in increasing order of ascii value
+                printf("File sorted. Kindly check file\n");
+                break;
 
             default:
                 break;
