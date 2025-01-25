@@ -19,7 +19,7 @@ int main()
     // set server address
     struct sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(25566);
+    server_addr.sin_port = htons(8080);
     server_addr.sin_addr.s_addr = INADDR_ANY;
 
     // bind socket
@@ -56,52 +56,56 @@ int main()
 
     printf("client connected!\n");
 
-    //fork the process
+    // fork the process
     pid_t pid;
     pid = fork();
 
-    while(1)
+    while (1)
 
-    {if(pid == 0){
-        //child process
-        //recv message from client and display it
-        char message[256];
-        if(recv(clientfd, message, sizeof(message), 0) == -1){
-            printf("error receiving message from client\n");
-            close(clientfd);
-            close(sockfd);
-            return 1;
+    {
+        if (pid == 0)
+        {
+            // child process
+            // recv message from client and display it
+            char message[256];
+            if (recv(clientfd, message, sizeof(message), 0) == -1)
+            {
+                printf("error receiving message from client\n");
+                close(clientfd);
+                close(sockfd);
+                return 1;
+            }
+
+            // if recvd message is "BYE", terminate
+            if (strcasecmp(message, "BYE") == 0)
+            {
+                printf("Connection terminated!\n");
+                close(clientfd);
+                close(sockfd);
+                return 1;
+            }
+
+            // display message
+            puts(message);
         }
+        else if (pid > 0)
+        {
+            // parent process
+            // read message from console and send to client
 
-        //if recvd message is "BYE", terminate
-        if(strcmp(message, "BYE") == 0){
-            printf("Connection terminated!\n");
-            close(clientfd);
-            close(sockfd);
-            return 1;
+            char message[256];
+            gets(message);
+
+            // send message to client
+            if (send(clientfd, message, sizeof(message), 0) == -1)
+            {
+                printf("error in sending message to client\n");
+                close(clientfd);
+                close(sockfd);
+                return 1;
+            }
         }
-
-        //display message
-        puts(message);
     }
-    else if(pid > 0){
-        //parent process
-        //read message from console and send to client
-
-        char message[256];
-        printf("enter message: \n");
-        gets(message);
-
-        //send message to client
-        if(send(clientfd, message, sizeof(message), 0) == -1){
-            printf("error in sending message to client\n");
-            close(clientfd);
-            close(sockfd);
-            return 1;
-        }
-
-        printf("message sent\n");
-    }}
 
     close(clientfd);
     close(sockfd);

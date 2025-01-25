@@ -17,7 +17,7 @@ int main()
     // set server address
     struct sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(25566);
+    server_addr.sin_port = htons(8080);
     server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
     // connect to server
@@ -29,42 +29,54 @@ int main()
         return 1;
     }
 
-    
-    //fork the process
+    // fork the process
     pid_t pid;
     pid = fork();
 
-    while(1){
-
-    if(pid == 0)
+    if (pid == 0)
     {
-        //child process
-        //read the message from console and send it to server
-
-        char message[256];
-        printf("Enter message: \n");
-        gets(message);
-
-        //send message to server
-        if(send(sockfd, message, sizeof(message), 0) == -1){
-            printf("error sending message from client to server\n");
-            close(sockfd);
-            return 1;
-        }
+        printf("PPID of child: %d\n", getppid());
+        printf("PID of child: %d\n", getpid());
     }
-    else if(pid > 0){
-        //parent process
-        //recv message from server and display it
-        char message[256];
-        if(recv(sockfd, message, sizeof(message), 0) == -1){
-            printf("error receiving message from server\n");
-            close(sockfd);
-            return 1;
-        }
-
-        //display message
-        puts(message);
+    else
+    {
+        printf("PPID of parent: %d\n", getppid());
+        printf("PID of parent: %d\n", getpid());
     }
+
+    while (1)
+    {
+        if (pid == 0)
+        {
+            // child process
+            // read the message from console and send it to server
+
+            char message[256];
+            gets(message);
+
+            // send message to server
+            if (send(sockfd, message, sizeof(message), 0) == -1)
+            {
+                printf("error sending message from client to server\n");
+                close(sockfd);
+                return 1;
+            }
+        }
+        else if (pid > 0)
+        {
+            // parent process
+            // recv message from server and display it
+            char message[256];
+            if (recv(sockfd, message, sizeof(message), 0) == -1)
+            {
+                printf("error receiving message from server\n");
+                close(sockfd);
+                return 1;
+            }
+
+            // display message
+            puts(message);
+        }
     }
 
     close(sockfd);

@@ -1,7 +1,0 @@
-{
-    "files.associations": {
-        "*.ejs": "html",
-        "*.css": "css",
-        "socket.h": "c"
-    }
-}
