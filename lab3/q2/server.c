@@ -17,6 +17,7 @@ void swap(char *x, char *y)
 
 void permute(char *a, int l, int r, char *result)
 {
+    // base case - we have complete permutation
     if (l == r)
     {
         strcat(result, a);
@@ -24,11 +25,13 @@ void permute(char *a, int l, int r, char *result)
     }
     else
     {
+
+        // recursive case - generate permutations by swapping chars
         for (int i = l; i <= r; i++)
         {
-            swap(a + l, a + i);
-            permute(a, l + 1, r, result);
-            swap(a + l, a + i);
+            swap(a + l, a + i);           // swap current char with char at pos i
+            permute(a, l + 1, r, result); // recursively generate permutations
+            swap(a + l, a + i);           // undo the swap to get original string
         }
     }
 }
