@@ -17,6 +17,8 @@ void swap(char *x, char *y)
 
 void permute(char *a, int l, int r, char *result)
 {
+    //*a - pointer to the string
+    // use pointer arithmetic to access different chars at different pos
     // base case - we have complete permutation
     if (l == r)
     {
