@@ -6,7 +6,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
-#include <sys/wait.h>
+#include <wait.h>
 
 void extract_numbers(char *string, char *result)
 {
@@ -23,7 +23,7 @@ void extract_numbers(char *string, char *result)
 
 int compare_numbers(const void *a, const void *b)
 {
-    return (*(char *)a - '0') - (*(char *)b - '0');
+    return (*(char *)a - *(char *)b);
 }
 
 void extract_chars(char *string, char *result)
@@ -44,27 +44,56 @@ int compare_chars(const void *a, const void *b)
     return (*(char *)b - *(char *)a);
 }
 
+int sendall(int sockfd, const void *buf, size_t len)
+{
+    size_t total = 0;       // how many bytes we've sent
+    size_t bytesleft = len; // how many we have left to send
+    int n;
+
+    while (total < len)
+    {
+        n = send(sockfd, (char *)buf + total, bytesleft, 0);
+        if (n == -1)
+        {
+            break;
+        }
+        total += n;
+        bytesleft -= n;
+    }
+
+    return n == -1 ? -1 : 0; // return -1 on failure, 0 on success
+}
+
 int main()
 {
     // create socket
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == -1)
     {
-        printf("socket creation error\n");
+        perror("socket creation error");
+        return 1;
+    }
+
+    // set SO_REUSEADDR option
+    int opt = 1;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
+    {
+        perror("setsockopt error");
+        close(sockfd);
         return 1;
     }
 
     // set server address
     struct sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(8080);
+    server_addr.sin_port = htons(6724);
     server_addr.sin_addr.s_addr = INADDR_ANY;
 
     // bind socket
     int bind_ret_val = bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr));
     if (bind_ret_val == -1)
     {
-        printf("binding error\n");
+        perror("binding error");
         close(sockfd);
         return 1;
     }
@@ -75,7 +104,7 @@ int main()
     int listen_ret_val = listen(sockfd, 1);
     if (listen_ret_val == -1)
     {
-        printf("unable to listen for connections error\n");
+        perror("unable to listen for connections error");
         close(sockfd);
         return 1;
     }
@@ -87,7 +116,7 @@ int main()
     int clientfd = accept(sockfd, (struct sockaddr *)&client_addr, &actual_len);
     if (clientfd == -1)
     {
-        printf("error accepting connections\n");
+        perror("error accepting connections");
         close(sockfd);
         return 1;
     }
@@ -95,93 +124,100 @@ int main()
     printf("client connected!\n");
 
     // recv string from client
-    char string[256];
-    int n;
-    if ((n = recv(clientfd, string, sizeof(string) - 1, 0)) == -1)
+    while (1)
     {
-        printf("error receiving string from client\n");
-        close(sockfd);
-        close(clientfd);
-        return 1;
-    }
-
-    // insert '\0' at the end of string
-    string[n] = '\0';
-
-    // fork the process
-    pid_t pid = fork();
-
-    if (pid == 0)
-    {
-        // child process
-        // extract the numbers and sort in ascending
-        char numbers[256];
-        extract_numbers(string, numbers);
-
-        // sort the numbers
-        qsort(numbers, strlen(numbers), sizeof(char), compare_numbers);
-
-        // send numbers back to client
-        if (send(clientfd, numbers, strlen(numbers) + 1, 0) == -1)
-        {
-            printf("error sending sorted numbers to client\n");
-            close(clientfd);
-            close(sockfd);
-            return 1;
-        }
-
-        // send child process ID to client
-        pid_t child_pid = getpid();
-        if (send(clientfd, &child_pid, sizeof(child_pid), 0) == -1)
-        {
-            printf("error sending child PID to client\n");
-            close(clientfd);
-            close(sockfd);
-            return 1;
-        }
-
-        close(clientfd);
-        exit(0);
-    }
-    else if (pid > 0)
-    {
-        // parent process
-        // wait for child process to finish
-        wait(NULL);
-
-        // extract the characters and sort in reverse
-        char chars[256];
-        extract_chars(string, chars);
-
-        // sort the chars in reverse
-        qsort(chars, strlen(chars), sizeof(char), compare_chars);
-
-        printf("sorted chars: %s\n", chars);
-
-        // send sorted chars back to client
+        char string[256];
         int n;
-        if ((n = send(clientfd, chars, strlen(chars) + 1, 0)) == -1)
+        if ((n = recv(clientfd, string, sizeof(string) - 1, 0)) == -1)
         {
-            printf("error sending sorted chars to client\n");
+            perror("error receiving string from client");
             close(clientfd);
-            close(sockfd);
             return 1;
         }
 
-        printf("number of bytes sent: %d\n", n);
-        printf("Actual string bytes: %ld\n", sizeof(char) * strlen(chars));
+        // insert '\0' at the end of string
+        string[n] = '\0';
 
-        // send parent process ID to client
-        pid_t parent_pid = getpid();
-        if (send(clientfd, &parent_pid, sizeof(parent_pid), 0) == -1)
+        // fork the process
+        pid_t pid = fork();
+
+        if (pid == 0)
         {
-            printf("error sending parent PID to client\n");
-            close(clientfd);
-            close(sockfd);
-            return 1;
-        }
+            // child process
+            // extract the numbers and sort in ascending
+            char numbers[256];
+            extract_numbers(string, numbers);
 
-        close(clientfd);
+            // sort the numbers
+            qsort(numbers, strlen(numbers), sizeof(char), compare_numbers);
+
+            // send numbers back to client
+            if (sendall(clientfd, numbers, 256) == -1)
+            {
+                perror("error sending sorted numbers to client");
+                close(clientfd);
+                close(sockfd);
+                return 1;
+            }
+
+            // send child process ID to client
+            pid_t child_pid = getpid();
+            char child_pid_str[256];
+            printf("child PID: %d\n", child_pid);
+            sprintf(child_pid_str, "%d", child_pid);
+            if (sendall(clientfd, child_pid_str, 256) == -1)
+            {
+                perror("error sending child PID to client");
+                close(clientfd);
+                close(sockfd);
+                return 1;
+            }
+
+            close(clientfd);
+            exit(0);
+        }
+        else if (pid > 0)
+        {
+            // parent process
+            // wait for child process to finish
+            wait(NULL);
+
+            // extract the characters and sort in reverse
+            char chars[256];
+            extract_chars(string, chars);
+
+            // sort the chars in reverse
+            qsort(chars, strlen(chars), sizeof(char), compare_chars);
+
+            printf("sorted chars: %s\n", chars);
+
+            // send sorted chars back to client
+            if (sendall(clientfd, chars, 256) == -1)
+            {
+                perror("error sending sorted chars to client");
+                close(clientfd);
+                close(sockfd);
+                return 1;
+            }
+
+            printf("number of bytes sent: %ld\n", strlen(chars) + 1);
+            printf("Actual string bytes: %ld\n", sizeof(char) * strlen(chars));
+
+            // send parent process ID to client
+            pid_t parent_pid = getpid();
+            printf("parent PID: %d\n", parent_pid);
+            char parent_pid_str[256];
+            sprintf(parent_pid_str, "%d", parent_pid);
+            if (sendall(clientfd, parent_pid_str, 256) == -1)
+            {
+                perror("error sending parent PID to client");
+                close(clientfd);
+                close(sockfd);
+                return 1;
+            }
+
+            // close(clientfd);
+        }
     }
 
     close(sockfd);
