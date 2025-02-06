@@ -44,26 +44,6 @@ int compare_chars(const void *a, const void *b)
     return (*(char *)b - *(char *)a);
 }
 
-int sendall(int sockfd, const void *buf, size_t len)
-{
-    size_t total = 0;       // how many bytes we've sent
-    size_t bytesleft = len; // how many we have left to send
-    int n;
-
-    while (total < len)
-    {
-        n = send(sockfd, (char *)buf + total, bytesleft, 0);
-        if (n == -1)
-        {
-            break;
-        }
-        total += n;
-        bytesleft -= n;
-    }
-
-    return n == -1 ? -1 : 0; // return -1 on failure, 0 on success
-}
-
 int main()
 {
     // create socket
@@ -152,7 +132,7 @@ int main()
             qsort(numbers, strlen(numbers), sizeof(char), compare_numbers);
 
             // send numbers back to client
-            if (sendall(clientfd, numbers, 256) == -1)
+            if (send(clientfd, numbers, 256, 0) == -1)
             {
                 perror("error sending sorted numbers to client");
                 close(clientfd);
@@ -162,10 +142,14 @@ int main()
 
             // send child process ID to client
             pid_t child_pid = getpid();
+
+            // we will first convert the pid_t(int) into a stream of bytes(buffer)
+            // then send it over the socket
             char child_pid_str[256];
             printf("child PID: %d\n", child_pid);
             sprintf(child_pid_str, "%d", child_pid);
-            if (sendall(clientfd, child_pid_str, 256) == -1)
+
+            if (send(clientfd, child_pid_str, 256, 0) == -1)
             {
                 perror("error sending child PID to client");
                 close(clientfd);
@@ -192,7 +176,7 @@ int main()
             printf("sorted chars: %s\n", chars);
 
             // send sorted chars back to client
-            if (sendall(clientfd, chars, 256) == -1)
+            if (send(clientfd, chars, 256, 0) == -1)
             {
                 perror("error sending sorted chars to client");
                 close(clientfd);
@@ -200,15 +184,12 @@ int main()
                 return 1;
             }
 
-            printf("number of bytes sent: %ld\n", strlen(chars) + 1);
-            printf("Actual string bytes: %ld\n", sizeof(char) * strlen(chars));
-
             // send parent process ID to client
             pid_t parent_pid = getpid();
             printf("parent PID: %d\n", parent_pid);
             char parent_pid_str[256];
             sprintf(parent_pid_str, "%d", parent_pid);
-            if (sendall(clientfd, parent_pid_str, 256) == -1)
+            if (send(clientfd, parent_pid_str, 256, 0) == -1)
             {
                 perror("error sending parent PID to client");
                 close(clientfd);

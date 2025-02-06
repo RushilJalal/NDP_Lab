@@ -36,8 +36,7 @@ int main()
         // input string from user
         char buffer[256];
         printf("Enter alphanumeric string: ");
-        fgets(buffer, sizeof(buffer), stdin);
-        buffer[strcspn(buffer, "\n")] = '\0'; // Remove newline character
+        gets(buffer);
 
         // send alphanumeric string to server
         if (send(sockfd, buffer, strlen(buffer) + 1, 0) == -1)
@@ -64,7 +63,6 @@ int main()
             close(sockfd);
             return 1;
         }
-        // sleep(1);
 
         // receive sorted chars from server
         char chars[256];
@@ -75,10 +73,6 @@ int main()
             close(sockfd);
             return 1;
         }
-
-        // sleep(1);
-
-        printf("Number of bytes received by client: %d\n", size);
 
         // receive parent process ID from server
         char parent_pid_str[256];
