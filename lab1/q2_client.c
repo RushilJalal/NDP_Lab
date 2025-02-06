@@ -51,6 +51,7 @@ int main()
 
         // receive length of string
         int string_len;
+        // recvfrom takes pointer to the server address struct length to be able to update the length
         if (recvfrom(sockfd, &string_len, sizeof(int), 0, (struct sockaddr *)&server_addr, &server_addr_len) == -1)
         {
             printf("error in receiving result length from client\n");

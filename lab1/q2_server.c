@@ -107,7 +107,7 @@ int main()
         }
 
         // send the number of occurences of each vowel to the client
-        int send_occr_result = sendto(serverfd, &vowels, 5 * sizeof(int), 0, (struct sockaddr *)&client_addr, sizeof(client_addr));
+        int send_occr_result = sendto(serverfd, vowels, 5 * sizeof(int), 0, (struct sockaddr *)&client_addr, sizeof(client_addr));
         if (send_occr_result == -1)
         {
             printf("Error sending number of occurences of each vowel\n");
