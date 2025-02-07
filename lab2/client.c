@@ -75,7 +75,7 @@ int main()
                 gets(string);
 
                 // send string to server
-                if (send(sockfd, string, sizeof(buffer), 0) == -1)
+                if (send(sockfd, string, sizeof(string), 0) == -1)
                 {
                     printf("Error sending string to server\n");
                     close(sockfd);
