@@ -61,7 +61,6 @@ int main()
     pid = fork();
 
     while (1)
-
     {
         if (pid == 0)
         {
@@ -82,7 +81,7 @@ int main()
                 printf("Connection terminated!\n");
                 close(clientfd);
                 close(sockfd);
-                return 1;
+                return 0;
             }
 
             // display message
