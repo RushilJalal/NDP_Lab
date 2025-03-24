@@ -44,9 +44,6 @@ int main()
     char buffer[BUFFER_SIZE];
     memset(buffer, 0, sizeof(buffer));
 
-    time_t rawtime;
-    struct tm *timeinfo;
-
     // Create server socket
     if ((server_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1)
     {
@@ -88,6 +85,9 @@ int main()
             perror("Accept failed");
             continue;
         }
+
+        time_t rawtime;
+        struct tm *timeinfo;
 
         // Get current date and time
         time(&rawtime);

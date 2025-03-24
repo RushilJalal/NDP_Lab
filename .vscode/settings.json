@@ -2,6 +2,8 @@
     "files.associations": {
         "*.ejs": "html",
         "*.css": "css",
-        "inet.h": "c"
+        "inet.h": "c",
+        "types.h": "c",
+        "unistd.h": "c"
     }
 }
