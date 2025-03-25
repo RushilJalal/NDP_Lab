@@ -33,116 +33,154 @@ int main()
     // input option from user
     int option;
     printf("Choose: \n1. Registration number\n2. Name of the student\n3. Subject code\n");
-    gets(option);
+    scanf("%d", &option);
+    getchar(); // consume newline character left by scanf
 
-    //input chosen option data from user
+    // send option to server
+    if (send(sockfd, &option, sizeof(option), 0) == -1)
+    {
+        printf("error sending option to server\n");
+        close(sockfd);
+        return 1;
+    }
+
+    // input chosen option data from user
     switch (option)
     {
     case 1:
-        //enter reg no
+        // enter reg no
         long reg_no;
         printf("Enter registration number: ");
         scanf("%ld", &reg_no);
 
-        //send the reg no to server
-        if (send(sockfd, &reg_no, sizeof(int), 0) == -1)
+        // send the reg no to server
+        if (send(sockfd, &reg_no, sizeof(reg_no), 0) == -1)
         {
             printf("error sending reg_no to server\n");
             close(sockfd);
             return 1;
         }
 
-        //recv whether student found
+        // recv whether student found
         int found;
-        if(recv(sockfd, &found, sizeof(int), 0) == -1)
+        if (recv(sockfd, &found, sizeof(found), 0) == -1)
         {
             printf("error receiving found value from server\n");
             close(sockfd);
             return 1;
         }
 
-        if(found == 1)
+        if (found == 1)
         {
-            
+            char name[50];
+            char res_address[50];
+
+            // receive name
+            if (recv(sockfd, name, sizeof(name), 0) == -1)
+            {
+                printf("error receiving name from server\n");
+                close(sockfd);
+                return 1;
+            }
+
+            // receive residential address
+            if (recv(sockfd, res_address, sizeof(res_address), 0) == -1)
+            {
+                printf("error receiving residential address from server\n");
+                close(sockfd);
+                return 1;
+            }
+
+            printf("Student Name: %s\n", name);
+            printf("Residential Address: %s\n", res_address);
+        }
+        else
+        {
+            printf("Student not found\n");
         }
 
         break;
 
     case 2:
-        //accept and send name of student
+        // accept and send name of student
         char name[50];
         printf("Enter student name: ");
-        gets(name);
+        fgets(name, sizeof(name), stdin);
+        name[strcspn(name, "\n")] = 0; // remove newline character
 
-        //send to server
-        if (send(sockfd, &reg_no, sizeof(int), 0) == -1)
+        // send to server
+        if (send(sockfd, name, sizeof(name), 0) == -1)
         {
-            printf("error sending reg_no to server\n");
+            printf("error sending name to server\n");
             close(sockfd);
             return 1;
         }
+
+        // recv whether student found
+        int found;
+        if (recv(sockfd, &found, sizeof(found), 0) == -1)
+        {
+            printf("error receiving found value from server\n");
+            close(sockfd);
+            return 1;
+        }
+
+        // if student found, receive that student's Dept., Semester, Section and Courses Registered
+        if (found == 1)
+        {
+            char dept[50];
+            char sem[50];
+            char sec[50];
+            char courses[50];
+
+            // receive dept
+            if (recv(sockfd, dept, sizeof(dept), 0) == -1)
+            {
+                printf("error receiving dept from server\n");
+                close(sockfd);
+                return 1;
+            }
+
+            // receive sem
+            if (recv(sockfd, sem, sizeof(sem), 0) == -1)
+            {
+                printf("error receiving sem from server\n");
+                close(sockfd);
+                return 1;
+            }
+
+            // receive sec
+            if (recv(sockfd, sec, sizeof(sec), 0) == -1)
+            {
+                printf("error receiving sec from server\n");
+                close(sockfd);
+                return 1;
+            }
+
+            // receive courses
+            if (recv(sockfd, courses, sizeof(courses), 0) == -1)
+            {
+                printf("error receiving courses from server\n");
+                close(sockfd);
+                return 1;
+            }
+
+            printf("Dept: %s\n", dept);
+            printf("Semester: %s\n", sem);
+            printf("Section: %s\n", sec);
+            printf("Courses Registered: %s\n", courses);
+        }
+        else
+        {
+            printf("Student not found\n");
+        }
         break;
-    
+
     default:
-        break;
-    }
-
-    // send alphanumeric string to server
-    if (send(sockfd, buffer, strlen(buffer) + 1, 0) == -1)
-    {
-        printf("error sending string to server\n");
+        printf("Invalid option\n");
         close(sockfd);
         return 1;
     }
-
-    // receive sorted numbers from server
-    char numbers[256];
-    if (recv(sockfd, numbers, sizeof(numbers), 0) == -1)
-    {
-        printf("error receiving sorted numbers from server\n");
-        close(sockfd);
-        return 1;
-    }
-
-    // receive child process ID from server
-    pid_t child_pid;
-    if (recv(sockfd, &child_pid, sizeof(child_pid), 0) == -1)
-    {
-        printf("error receiving child PID from server\n");
-        close(sockfd);
-        return 1;
-    }
-
-    sleep(1);
-
-    // receive sorted chars from server
-    char chars[256];
-    int size;
-    if ((size = recv(sockfd, chars, sizeof(chars), 0)) == -1)
-    {
-        printf("error receiving sorted chars from server\n");
-        close(sockfd);
-        return 1;
-    }
-
-    sleep(1);
-
-    printf("Number of bytes received by client: %d\n", size);
-
-    // receive parent process ID from server
-    pid_t parent_pid;
-    if (recv(sockfd, &parent_pid, sizeof(parent_pid) - 4, 0) == -1)
-    {
-        printf("error receiving parent PID from server\n");
-        close(sockfd);
-        return 1;
-    }
-
-    // display results
-    printf("Child Process ID: %d\n", child_pid);
-    printf("Sorted Numbers: %s\n", numbers);
-    printf("Parent Process ID: %d\n", parent_pid);
-    printf("Sorted Characters: %s\n", chars);
 
     close(sockfd);
     return 0;
