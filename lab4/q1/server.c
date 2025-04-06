@@ -8,48 +8,48 @@
 #include <stdlib.h>
 #include <sys/wait.h>
 
-typedef struct course{
+typedef struct course
+{
     char subject_name[20];
     int marks;
-}course;
+} course;
 
-typedef struct student{
+typedef struct student
+{
     long reg_no;
     char name[50];
     char sub_code[20];
     char res_address[50];
-    char dept[10];
+    char dept[20];
     int sem;
     char section;
     course subjects[10];
-}student;
-
+} student;
 
 int main()
 {
     student students[2] = {
         {
-            12345678,                       // reg_no
-            "John Doe",                      // name
-            "CS101",                         // sub_code
-            "123 Main St, Springfield",      // res_address
-            "Computer Science",              // dept
-            5,                               // sem
-            'A',                             // section
-            { {"OS", 85}, {"DS", 90}, {"CN", 88}, {"SE", 92} }  // subjects
+            12345678,                                        // reg_no
+            "John Doe",                                      // name
+            "CS101",                                         // sub_code
+            "123 Main St, Springfield",                      // res_address
+            "Computer Science",                              // dept
+            5,                                               // sem
+            'A',                                             // section
+            {{"OS", 85}, {"DS", 90}, {"CN", 88}, {"SE", 92}} // subjects
         },
 
         {
-            98765432,                       // reg_no
-            "Jane Smith",                    // name
-            "MTH202",                        // sub_code
-            "456 Oak Rd, Rivertown",         // res_address
-            "Mathematics",                   // dept
-            3,                               // sem
-            'B',                             // section
-            { {"Calculus", 95}, {"LA", 89}, {"PT", 91}, {"AI", 88} }  // subjects
-        }
-    };
+            98765432,                                              // reg_no
+            "Jane Smith",                                          // name
+            "MTH202",                                              // sub_code
+            "456 Oak Rd, Rivertown",                               // res_address
+            "Mathematics",                                         // dept
+            3,                                                     // sem
+            'B',                                                   // section
+            {{"Calculus", 95}, {"LA", 89}, {"PT", 91}, {"AI", 88}} // subjects
+        }};
 
     // create socket
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -60,7 +60,8 @@ int main()
     }
 
     int optval = 1;
-    if(setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval))){
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)))
+    {
         printf("error setting socket options\n");
         return 1;
     }
@@ -107,8 +108,7 @@ int main()
 
     // recv option from client
     int option;
-    int n;
-    if (recv(clientfd, &option, sizeof(int), 0) == -1)
+    if (recv(clientfd, &option, sizeof(option), 0) == -1)
     {
         printf("error receiving option from client\n");
         close(sockfd);
@@ -118,75 +118,154 @@ int main()
 
     switch (option)
     {
-        case 1:
-            //recv reg_no
-            long reg_no;
-            if (recv(clientfd, &reg_no, sizeof(long), 0) == -1)
+    case 1:
+        // recv reg_no
+        long reg_no;
+        if (recv(clientfd, &reg_no, sizeof(reg_no), 0) == -1)
+        {
+            printf("error receiving reg_no from client\n");
+            close(sockfd);
+            close(clientfd);
+            return 1;
+        }
+
+        // create child process
+        pid_t pid = fork();
+
+        if (pid == 0)
+        {
+            // child process
+            // check if reg_no exists in any struct and display name and address
+
+            int found = 0;
+            int i;
+            for (i = 0; i < 2; i++)
             {
-                printf("error receiving reg_no from client\n");
+                if (students[i].reg_no == reg_no)
+                {
+                    found = 1;
+                    break;
+                }
+            }
+
+            // send found to client
+            if (send(clientfd, &found, sizeof(found), 0) == -1)
+            {
+                printf("error sending found result to client\n");
                 close(sockfd);
                 close(clientfd);
                 return 1;
             }
 
-            //create child process
-            pid_t pid = fork();
-
-            if(pid == 0)
+            // if student found, send name, address
+            if (found == 1)
             {
-                //child process
-                //check if reg_no exists in any struct and display name and address
-
-                int found = 0;
-                int i;
-                for(i = 0; i < 2; i++)
+                if (send(clientfd, students[i].name, sizeof(students[i].name), 0) == -1)
                 {
-                    if(students[i].reg_no == reg_no)
-                    {
-                        found = 1;
-                        break;
-                    }
-                }
-
-                //send found to client
-                if (send(clientfd, &found, sizeof(int), 0) == -1)
-                {
-                    printf("error sending found result to client\n");
+                    printf("error sending name to client\n");
                     close(sockfd);
                     close(clientfd);
                     return 1;
                 }
 
-                //if student found, send name, address
-                if(found == 1)
+                if (send(clientfd, students[i].res_address, sizeof(students[i].res_address), 0) == -1)
                 {
-                    if(send(clientfd, &students[i].name, sizeof(students[i].name), 0) == -1)
-                    {
-                        printf("error sending name to client\n");
-                        close(sockfd);
-                        close(clientfd);
-                        return 1;
-                    }
-
-                    if(send(clientfd, &students[i].res_address, sizeof(students[i].res_address), 0) == -1)
-                    {
-                        printf("error sending residential address to client\n");
-                        close(sockfd);
-                        close(clientfd);
-                        return 1;
-                    }
-
+                    printf("error sending residential address to client\n");
+                    close(sockfd);
+                    close(clientfd);
+                    return 1;
                 }
             }
-            break;
+        }
+        break;
 
-        case 2:
-            //recv name of student
-        
-        default:
-            break;
+    case 2:
+        // recv name of student
+        char name[50];
+        if (recv(clientfd, name, sizeof(name), 0) == -1)
+        {
+            printf("error receiving name from client\n");
+            close(sockfd);
+            close(clientfd);
+            return 1;
+        }
+
+        // handle the received name by sending back that student's details
+        int found = 0;
+        int i;
+        for (i = 0; i < 2; i++)
+        {
+            if (strcmp(students[i].name, name) == 0)
+            {
+                found = 1;
+                break;
+            }
+        }
+
+        // send found to client
+        if (send(clientfd, &found, sizeof(found), 0) == -1)
+        {
+            printf("error sending found result to client\n");
+            close(sockfd);
+            close(clientfd);
+            return 1;
+        }
+
+        // if student found, send that student's Dept., Semester, Section and Courses Registered
+        if (found == 1)
+        {
+            if (send(clientfd, students[i].dept, sizeof(students[i].dept), 0) == -1)
+            {
+                printf("error sending department to client\n");
+                close(sockfd);
+                close(clientfd);
+                return 1;
+            }
+
+            if (send(clientfd, &students[i].sem, sizeof(students[i].sem), 0) == -1)
+            {
+                printf("error sending semester to client\n");
+                close(sockfd);
+                close(clientfd);
+                return 1;
+            }
+
+            if (send(clientfd, &students[i].section, sizeof(students[i].section), 0) == -1)
+            {
+                printf("error sending section to client\n");
+                close(sockfd);
+                close(clientfd);
+                return 1;
+            }
+
+            // send courses registered
+            for (int j = 0; j < 4; j++)
+            {
+                if (send(clientfd, students[i].subjects[j].subject_name, sizeof(students[i].subjects[j].subject_name), 0) == -1)
+                {
+                    printf("error sending subject name to client\n");
+                    close(sockfd);
+                    close(clientfd);
+                    return 1;
+                }
+
+                if (send(clientfd, &students[i].subjects[j].marks, sizeof(students[i].subjects[j].marks), 0) == -1)
+                {
+                    printf("error sending marks to client\n");
+                    close(sockfd);
+                    close(clientfd);
+                    return 1;
+                }
+            }
+        }
+
+
+    default:
+        printf("Invalid option received\n");
+        close(sockfd);
+        close(clientfd);
+        return 1;
     }
-    
 
     close(sockfd);
     return 0;
